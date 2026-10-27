@@ -1,0 +1,24 @@
+{
+  "name": "lead-finder-next",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "People search with filters, pagination and CSV download. Next.js (App Router) + SQLite.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "seed": "node scripts/seed.js 1000000",
+    "import": "node scripts/import-csv.js"
+  },
+  "engines": {
+    "node": ">=20.9"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "csv-parse": "^7.0.3",
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}
