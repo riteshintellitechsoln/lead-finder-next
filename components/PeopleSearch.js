@@ -6,8 +6,10 @@ import { useSearchParams } from 'next/navigation';
 import Pager from './Pager';
 import PersonCell, { EmailCell } from './PersonCell';
 import { useToast } from './Toast';
-import { api, download, notifyStatsChanged } from '@/lib/api';
-import { fmt, sizeLabel, SIZE_LABELS } from '@/lib/format';
+import { useSession } from './Session';
+import { download } from '@/lib/api';
+import { compact, fmt, sizeLabel, SIZE_LABELS } from '@/lib/format';
+import Num from './Num';
 
 const MULTI = ['personTitles', 'personNotTitles', 'city', 'seniority', 'industry', 'employees'];
 
@@ -15,6 +17,7 @@ export default function PeopleSearch({ filters }) {
   const sp = useSearchParams();
   const spStr = sp.toString();
   const toast = useToast();
+  const session = useSession();
 
   // Read current filters from the URL
   const state = useMemo(() => {
@@ -84,10 +87,11 @@ export default function PeopleSearch({ filters }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qInput]);
 
-  const rows = data?.content || [];
+  // A guest's saved marks come from their in-memory list
+  const rows = (data?.content || []).map((r) => (session.guest ? { ...r, saved: session.saved.has(r.id) ? 1 : 0 } : r));
+  const maxExport = filters.maxExportRows;
   const pageIds = rows.map((r) => r.id);
   const allOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
-  const maxExport = filters.maxExportRows;
 
   function toggleRow(id, on) {
     setSelected((prev) => {
@@ -104,17 +108,22 @@ export default function PeopleSearch({ filters }) {
     });
   }
 
-  async function saveSelected() {
+  // Logged in: stored in the database. Guest: kept in memory until refresh (see Session.js).
+  const guestNote = session.guest ? ' Sign in to keep it after a refresh.' : '';
+  async function run(action, message) {
     try {
-      const r = await api('/saved', { method: 'POST', body: { ids: [...selected] } });
-      toast(`Saved ${fmt(r.added)} new ${r.added === 1 ? 'lead' : 'leads'}`);
+      const r = await action();
+      toast(message(r) + guestNote);
       setSelected(new Set());
-      setReload((n) => n + 1);
-      notifyStatsChanged();
+      if (!session.guest) setReload((n) => n + 1);
     } catch (e) {
       toast(e.message);
     }
   }
+  const saveSelected = () =>
+    run(() => session.save([...selected]), (r) => `Saved ${fmt(r.added)} new ${r.added === 1 ? 'lead' : 'leads'}.`);
+
+  // CSV with a BOM, so Excel opens it directly with the right characters
   function downloadSelected() {
     if (selected.size > 1000) return toast('Select up to 1,000 people, or use Download all results.');
     download(`/api/people/export?ids=${[...selected].join(',')}`);
@@ -124,7 +133,7 @@ export default function PeopleSearch({ filters }) {
     const p = new URLSearchParams(spStr);
     ['page', 'pageSize', 'sortBy', 'sortDir'].forEach((k) => p.delete(k));
     download(`/api/people/export?${p}`);
-    toast(`Downloading ${fmt(Math.min(data?.totalElements || 0, maxExport))} people as CSV`);
+    toast(`Downloading ${fmt(Math.min(data?.totalElements || 0, maxExport))} people`);
   }
 
   const chips = [
@@ -136,7 +145,7 @@ export default function PeopleSearch({ filters }) {
     ...(state.hasEmail ? [{ key: 'hasEmail', value: 'true', label: 'Has email' }] : []),
   ];
   const removeChip = (c) =>
-    c.key === 'q' || c.key === 'hasEmail' ? update((p) => p.delete(c.key)) : removeValue(c.key, c.value);
+    c.key === 'q' || c.key === 'hasEmail' ?update((p) => p.delete(c.key)) : removeValue(c.key, c.value);
 
   const Checks = ({ k, items }) => (
     <div className="checks">
@@ -145,7 +154,7 @@ export default function PeopleSearch({ filters }) {
         <label key={o.value}>
           <input type="checkbox" checked={state[k].includes(o.value)} onChange={() => toggle(k, o.value)} />{' '}
           {o.label ?? o.value}
-          {o.count != null && <span className="c">{fmt(o.count)}</span>}
+          {o.count != null && <span className="c"><Num n={o.count} /></span>}
         </label>
       ))}
     </div>
@@ -231,7 +240,7 @@ export default function PeopleSearch({ filters }) {
             <div className="count">
               {data ? (
                 <>
-                  {fmt(data.totalElements)} people
+                  Total <Num n={data.totalElements} />
                   <span>page {fmt(data.page)} of {fmt(data.totalPages)} · {data.tookMs} ms</span>
                 </>
               ) : (
@@ -264,8 +273,9 @@ export default function PeopleSearch({ filters }) {
             <span className="meta">{fmt(selected.size)} selected</span>
             <button className="btn" type="button" disabled={!selected.size} onClick={saveSelected}>Save to list</button>
             <button className="btn" type="button" disabled={!selected.size} onClick={downloadSelected}>Download selected</button>
+            <div className="spacer" />
             <button className="btn primary" type="button" disabled={!data?.totalElements} onClick={downloadAll}>
-              {data && data.totalElements > maxExport ? `Download first ${fmt(maxExport)}` : `Download all ${fmt(data?.totalElements)}`}
+              {data && data.totalElements > maxExport ? `Download first ${compact(maxExport)}` : `Download all ${compact(data?.totalElements)}`}
             </button>
           </div>
 

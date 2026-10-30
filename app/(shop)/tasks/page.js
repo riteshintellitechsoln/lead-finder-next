@@ -1,24 +1,27 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import TaskItem from '@/components/TaskItem';
+import GuestNote from '@/components/GuestNote';
+import { useSession } from '@/components/Session';
 import { useToast } from '@/components/Toast';
-import { api, notifyStatsChanged } from '@/lib/api';
 
 export default function TasksPage() {
   const toast = useToast();
-  const [tasks, setTasks] = useState(null);
+  const session = useSession();
+  const [serverTasks, setTasks] = useState(null);
   const [form, setForm] = useState({ title: '', who: '', due_date: '' });
 
-  const load = useCallback(() => api('/tasks').then(setTasks, (e) => toast(e.message)), [toast]);
+  const { guest, listTasks } = session;
+  const load = useCallback(() => { if (!guest) listTasks().then(setTasks, (e) => toast(e.message)); }, [guest, listTasks, toast]);
   useEffect(() => { load(); }, [load]);
+  const tasks = guest ? session.tasks : serverTasks;
 
   async function add(e) {
     e.preventDefault();
     try {
-      await api('/tasks', { method: 'POST', body: form });
+      await session.addTask(form);
       setForm({ title: '', who: '', due_date: '' });
       toast('Task added');
-      notifyStatsChanged();
       load();
     } catch (err) {
       toast(err.message);
@@ -28,6 +31,7 @@ export default function TasksPage() {
 
   return (
     <section className="view">
+      <GuestNote what="Tasks" />
       <div className="card">
         <h3>Add a task</h3>
         <form className="taskform" onSubmit={add}>

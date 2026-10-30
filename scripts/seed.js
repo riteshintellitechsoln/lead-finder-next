@@ -32,6 +32,7 @@ for (const a of W1) for (const b of W2) {
 
 console.log(`Seeding ${COUNT.toLocaleString('en-IN')} people...`);
 const t0 = Date.now();
+// New people get reused ids, so saved lists that point at old ids are cleared too
 db.exec('DELETE FROM saved; DELETE FROM people;');
 dropIndexes();
 

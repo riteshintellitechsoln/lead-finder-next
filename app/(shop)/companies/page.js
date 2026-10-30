@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Pager from '@/components/Pager';
 import { api } from '@/lib/api';
 import { fmt, initials, sizeLabel } from '@/lib/format';
+import Num from '@/components/Num';
 
 export default function CompaniesPage() {
   const [q, setQ] = useState('');
@@ -29,7 +30,7 @@ export default function CompaniesPage() {
       <div className="bar">
         <input className="txt narrow" placeholder="Search companies" autoComplete="off" value={q} onChange={(e) => setQ(e.target.value)} />
         <div className="spacer" />
-        <div className="count">{data ? `${fmt(data.totalElements)} companies` : ''}</div>
+        <div className="count">{data ? <>Total <Num n={data.totalElements} /> companies</> : ''}</div>
       </div>
       <div className="tablewrap">
         <table>

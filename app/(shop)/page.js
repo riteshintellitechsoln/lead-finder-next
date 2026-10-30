@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { getStats, getFilters, searchPeople } from '@/lib/people';
 import { listTasks } from '@/lib/tasks';
+import { getUser } from '@/lib/auth';
 import { fmt } from '@/lib/format';
-import { Greeting, AskBox, SaveButton, HomeTasks } from '@/components/HomeWidgets';
+import { Greeting, AskBox, SaveButton, HomeTasks, MyCount } from '@/components/HomeWidgets';
 import PersonCell from '@/components/PersonCell';
+import Num from '@/components/Num';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,11 +18,12 @@ const PRESETS = [
   ['CTOs', 'personTitles=CTO'],
 ];
 
-export default function HomePage() {
-  const stats = getStats();
+export default async function HomePage() {
+  const user = await getUser(); // null for guests
+  const stats = getStats(user);
   const filters = getFilters();
-  const recommended = searchPeople(new URLSearchParams('personTitles=HR&personTitles=Talent&hasEmail=true&pageSize=5')).content;
-  const tasks = listTasks().filter((t) => !t.done).slice(0, 5);
+  const recommended = searchPeople(new URLSearchParams('personTitles=HR&personTitles=Talent&hasEmail=true&pageSize=5'), user).content;
+  const tasks = (user ? listTasks(user.id) : []).filter((t) => !t.done).slice(0, 5);
   const topCities = filters.city.slice(0, 6);
   const maxCity = topCities[0]?.count || 1;
 
@@ -38,10 +41,10 @@ export default function HomePage() {
       </div>
 
       <div className="stats">
-        <div className="card stat"><div className="k">People in database</div><div className="v">{fmt(stats.totalPeople)}</div><div className="meta">{fmt(stats.withEmail)} with email</div></div>
-        <div className="card stat"><div className="k">Companies</div><div className="v">{fmt(stats.totalCompanies)}</div><div className="meta">Unique company names</div></div>
-        <div className="card stat"><div className="k">Saved leads</div><div className="v">{fmt(stats.saved)}</div><div className="meta">Ready to download</div></div>
-        <div className="card stat"><div className="k">Tasks due</div><div className="v">{fmt(stats.tasksDue)}</div><div className="meta">Today or overdue</div></div>
+        <div className="card stat"><div className="k">People in database</div><div className="v"><Num n={stats.totalPeople} /></div><div className="meta"><Num n={stats.withEmail} /> with email</div></div>
+        <div className="card stat"><div className="k">Companies</div><div className="v"><Num n={stats.totalCompanies} /></div><div className="meta">Unique company names</div></div>
+        <div className="card stat"><div className="k">Saved leads</div><div className="v"><MyCount name="saved" value={stats.saved} /></div><div className="meta">{user ? 'Ready to download' : <Link className="link" href="/signup">Sign up to keep them</Link>}</div></div>
+        <div className="card stat"><div className="k">Tasks due</div><div className="v"><MyCount name="tasksDue" value={stats.tasksDue} /></div><div className="meta">Today or overdue</div></div>
       </div>
 
       <div className="grid2">
@@ -76,7 +79,7 @@ export default function HomePage() {
                 <div className="barrow" key={c.value}>
                   <Link href={`/people?city=${encodeURIComponent(c.value)}`}>{c.value}</Link>
                   <div className="track"><i style={{ width: `${(c.count / maxCity) * 100}%` }} /></div>
-                  <span className="num">{fmt(c.count)}</span>
+                  <span className="num"><Num n={c.count} /></span>
                 </div>
               ))}
             </div>
