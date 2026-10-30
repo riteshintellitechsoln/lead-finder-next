@@ -2,9 +2,16 @@
 // Small interactive pieces used by the (server-rendered) Home page
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, notifyStatsChanged } from '@/lib/api';
+import { fmt } from '@/lib/format';
+import { useSession } from './Session';
 import { useToast } from './Toast';
 import TaskItem from './TaskItem';
+
+// A number from the server for logged-in users, or from the guest's in-memory lists
+export function MyCount({ name, value }) {
+  const session = useSession();
+  return fmt(session.guest ? session.guestCounts[name] : value);
+}
 
 export function Greeting() {
   const [text, setText] = useState('Welcome');
@@ -47,15 +54,22 @@ export function AskBox({ cities }) {
 export function SaveButton({ id }) {
   const router = useRouter();
   const toast = useToast();
+  const session = useSession();
   const [busy, setBusy] = useState(false);
+
+  if (session.guest && session.saved.has(id)) return <span className="pill ok">Saved</span>;
 
   async function save() {
     setBusy(true);
     try {
-      await api('/saved', { method: 'POST', body: { ids: [id] } });
-      toast('Saved to list');
-      notifyStatsChanged();
-      router.refresh(); // re-render the server component with fresh data
+      await session.save([id]);
+      if (session.guest) {
+        toast('Saved. Sign in to keep it after a refresh.');
+        setBusy(false);
+      } else {
+        toast('Saved to list');
+        router.refresh(); // re-render the server component with fresh data
+      }
     } catch (e) {
       toast(e.message);
       setBusy(false);
@@ -68,8 +82,10 @@ export function SaveButton({ id }) {
   );
 }
 
-export function HomeTasks({ tasks }) {
+export function HomeTasks({ tasks: serverTasks }) {
   const router = useRouter();
+  const session = useSession();
+  const tasks = session.guest ? session.tasks.filter((t) => !t.done).slice(0, 5) : serverTasks;
   if (!tasks.length) return <div className="meta">No open tasks. Add one in Tasks.</div>;
   return tasks.map((t) => <TaskItem key={t.id} task={t} onChanged={() => router.refresh()} />);
 }

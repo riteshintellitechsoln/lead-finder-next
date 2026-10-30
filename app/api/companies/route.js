@@ -1,4 +1,4 @@
-// GET /api/companies?q=&page=&pageSize=
+// GET /api/companies?q=&page=&pageSize= (public)
 import { searchCompanies } from '@/lib/people';
 import { handle } from '@/lib/route';
 

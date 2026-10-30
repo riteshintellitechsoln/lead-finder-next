@@ -1,14 +1,17 @@
 import './globals.css';
-import Sidebar from '@/components/Sidebar';
-import TopBar from '@/components/TopBar';
 import { ToastProvider } from '@/components/Toast';
+import { SessionProvider } from '@/components/Session';
+import { getUser } from '@/lib/auth';
 
 export const metadata = {
   title: 'Lead Finder',
   description: 'Search people by job title, location, seniority, industry and company size.',
 };
 
-export default function RootLayout({ children }) {
+// The sidebar shells live in app/(shop)/layout.js (users) and app/admin/layout.js (admin)
+// SessionProvider sits here so a guest's in-memory lists survive moving between pages
+export default async function RootLayout({ children }) {
+  const user = await getUser();
   return (
     <html lang="en">
       <head>
@@ -20,13 +23,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <ToastProvider>
-          <div className="shell">
-            <Sidebar />
-            <div className="main">
-              <TopBar />
-              {children}
-            </div>
-          </div>
+          <SessionProvider user={user}>{children}</SessionProvider>
         </ToastProvider>
       </body>
     </html>
