@@ -12,5 +12,5 @@ export const GET = handle(async () => {
 
 export const POST = handle(async (request) => {
   await requireAdmin();
-  return Response.json(createUser(await readJson(request)), { status: 201 });
+  return Response.json(await createUser(await readJson(request)), { status: 201 });
 });

@@ -5,9 +5,9 @@ import { handle, readJson } from '@/lib/route';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = handle(async () => listTasks((await requireUser()).id));
+export const GET = handle(async (request) => listTasks((await requireUser()).id, request.signal));
 
 export const POST = handle(async (request) => {
   const user = await requireUser();
-  return Response.json(addTask(user.id, await readJson(request)), { status: 201 });
+  return Response.json(await addTask(user.id, await readJson(request)), { status: 201 });
 });

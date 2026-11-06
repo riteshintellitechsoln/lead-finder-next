@@ -6,8 +6,8 @@ import Num from '@/components/Num';
 
 export const dynamic = 'force-dynamic';
 
-export default function AdminHome() {
-  const s = adminStats();
+export default async function AdminHome() {
+  const s = await adminStats();
   const maxCity = s.topCities[0]?.count || 1;
 
   return (
@@ -16,7 +16,8 @@ export default function AdminHome() {
         <div className="card stat"><div className="k">People in database</div><div className="v"><Num n={s.totalPeople} /></div><div className="meta"><Num n={s.withEmail} /> with email</div></div>
         <div className="card stat"><div className="k">Companies</div><div className="v"><Num n={s.totalCompanies} /></div><div className="meta">Unique company names</div></div>
         <div className="card stat"><div className="k">Users</div><div className="v"><Num n={s.users} /></div><div className="meta">{fmt(s.newUsers7)} joined in the last 7 days</div></div>
-        <div className="card stat"><div className="k">Saved leads</div><div className="v"><Num n={s.savedLeads} /></div><div className="meta">Across all users</div></div>
+        <div className="card stat"><div className="k">Saved searches</div><div className="v"><Num n={s.savedSearches} /></div><div className="meta">Across all users</div></div>
+        <Link className="card stat" href="/admin/credits"><div className="k">Credit requests</div><div className="v"><Num n={s.pendingCredits} /></div><div className="meta">waiting for you</div></Link>
       </div>
 
       <div className="grid2">

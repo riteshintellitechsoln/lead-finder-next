@@ -44,6 +44,20 @@ export function SessionProvider({ user, children }) {
         commit('saved', next);
         return { added };
       },
+      // Everything matching a search (signed in only: a guest's list lives in the browser)
+      // Saved as ONE named list (shown as a single entry on the Saved page)
+      saveSearch: (query, name, summary) => remote('/saved', { method: 'POST', body: { query, name, summary } }),
+      // Only the filters of a search (opened later on People, with the filters applied)
+      saveFilters: (query, name, summary) => remote('/saved', { method: 'POST', body: { query, name, summary, filtersOnly: true } }),
+      deleteSavedList: (id) => remote(`/saved/lists/${id}`, { method: 'DELETE' }),
+      renameSavedList: (id, name) => remote(`/saved/lists/${id}`, { method: 'PATCH', body: { name } }),
+      removeFromSavedList: (id, personId) => remote(`/saved/lists/${id}/people/${personId}`, { method: 'DELETE' }),
+      clearSaved: async () => {
+        if (!guest) return remote('/saved', { method: 'DELETE' });
+        const removed = r.saved.size;
+        commit('saved', new Set());
+        return { removed };
+      },
       unsave: async (id) => {
         if (!guest) return remote('/saved/' + id, { method: 'DELETE' });
         const next = new Set(r.saved);

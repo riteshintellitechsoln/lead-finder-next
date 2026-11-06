@@ -3,6 +3,11 @@ node_modules/
 data/*.db
 data/*.db-wal
 data/*.db-shm
+data/*.duckdb
+data/*.duckdb.wal
+data/*.building*
+data/*.tmp/
+data/uploads/
 *.log
 .env*
 !.env.example
