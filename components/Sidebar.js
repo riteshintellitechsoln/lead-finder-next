@@ -36,6 +36,12 @@ const icons = {
     </>
   ),
   logout: <path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10" />,
+  credits: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5v9M14.8 9.4c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2s1.2 1.7 2.8 2 2.8.9 2.8 2.1-1.2 2-2.8 2c-1.3 0-2.4-.6-2.9-1.5" />
+    </>
+  ),
 };
 
 const MENUS = {
@@ -44,15 +50,21 @@ const MENUS = {
     { group: 'Prospect' },
     { href: '/people', icon: 'people', label: 'People' },
     { href: '/companies', icon: 'companies', label: 'Companies' },
-    { href: '/saved', icon: 'saved', label: 'Saved leads', badge: 'saved' },
+    { href: '/saved', icon: 'saved', label: 'Saved searches', badge: 'saved' },
     { group: 'Engage' },
     { href: '/tasks', icon: 'tasks', label: 'Tasks', badge: 'tasksDue' },
+    { href: '/credits', icon: 'credits', label: 'Credits', badge: 'credits', signedIn: true },
     { href: '/profile', icon: 'profile', label: 'My profile', signedIn: true },
   ],
   admin: [
     { href: '/admin', icon: 'home', label: 'Dashboard' },
+    { group: 'Prospect' },
+    { href: '/people', icon: 'people', label: 'People' },
+    { href: '/companies', icon: 'companies', label: 'Companies' },
+    { href: '/saved', icon: 'saved', label: 'Saved searches' },
     { group: 'Manage' },
     { href: '/admin/users', icon: 'people', label: 'Users' },
+    { href: '/admin/credits', icon: 'credits', label: 'Credit requests', badge: 'pendingCredits' },
     { href: '/admin/data', icon: 'data', label: 'Data' },
     { group: 'Account' },
     { href: '/admin/profile', icon: 'profile', label: 'My profile' },

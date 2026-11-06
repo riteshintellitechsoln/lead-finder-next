@@ -3,20 +3,22 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "People search with filters, pagination and CSV download. Next.js (App Router) + SQLite.",
+  "description": "Apollo-style people search for 20M+ rows, with login, admin panel and guest mode. Next.js (App Router) + DuckDB.",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/next.js dev",
     "build": "next build",
-    "start": "next start",
-    "seed": "node scripts/seed.js 1000000",
-    "import": "node scripts/import-csv.js"
+    "start": "node scripts/next.js start",
+    "seed": "node scripts/seed.js",
+    "import": "node scripts/import-csv.js",
+    "migrate-sqlite": "node scripts/migrate-sqlite.js",
+    "bench": "node scripts/bench.js",
+    "sql": "node scripts/sql.js"
   },
   "engines": {
     "node": ">=20.9"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
-    "csv-parse": "^7.0.3",
+    "@duckdb/node-api": "^2.0.0-r.1",
     "next": "^16.4.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

@@ -18,12 +18,20 @@ const PRESETS = [
   ['CTOs', 'personTitles=CTO'],
 ];
 
+const EMPTY_STATS = { totalPeople: 0, withEmail: 0, totalCompanies: 0, saved: 0, tasksDue: 0 };
+
 export default async function HomePage() {
   const user = await getUser(); // null for guests
-  const stats = getStats(user);
-  const filters = getFilters();
-  const recommended = searchPeople(new URLSearchParams('personTitles=HR&personTitles=Talent&hasEmail=true&pageSize=5'), user).content;
-  const tasks = (user ? listTasks(user.id) : []).filter((t) => !t.done).slice(0, 5);
+  // All four run in parallel; with no data yet the page still renders (with zeros)
+  const [stats, filters, recommended, allTasks] = await Promise.all([
+    getStats(user).catch(() => null),
+    getFilters().catch(() => ({ city: [] })),
+    searchPeople(new URLSearchParams('personTitles=HR&personTitles=Talent&hasEmail=true&pageSize=5'), user)
+      .then((r) => r.content, () => []),
+    user ? listTasks(user.id) : [],
+  ]);
+  const tasks = allTasks.filter((t) => !t.done).slice(0, 5);
+  const s = stats || EMPTY_STATS;
   const topCities = filters.city.slice(0, 6);
   const maxCity = topCities[0]?.count || 1;
 
@@ -40,11 +48,16 @@ export default async function HomePage() {
         </div>
       </div>
 
+      {!stats && (
+        <div className="guestnote">
+          <span><b>No people data yet.</b> An admin can upload a CSV in Admin &gt; Data, or stop the app and run <code>npm run seed</code>.</span>
+        </div>
+      )}
       <div className="stats">
-        <div className="card stat"><div className="k">People in database</div><div className="v"><Num n={stats.totalPeople} /></div><div className="meta"><Num n={stats.withEmail} /> with email</div></div>
-        <div className="card stat"><div className="k">Companies</div><div className="v"><Num n={stats.totalCompanies} /></div><div className="meta">Unique company names</div></div>
-        <div className="card stat"><div className="k">Saved leads</div><div className="v"><MyCount name="saved" value={stats.saved} /></div><div className="meta">{user ? 'Ready to download' : <Link className="link" href="/signup">Sign up to keep them</Link>}</div></div>
-        <div className="card stat"><div className="k">Tasks due</div><div className="v"><MyCount name="tasksDue" value={stats.tasksDue} /></div><div className="meta">Today or overdue</div></div>
+        <div className="card stat"><div className="k">People in database</div><div className="v"><Num n={s.totalPeople} /></div><div className="meta"><Num n={s.withEmail} /> with email</div></div>
+        <div className="card stat"><div className="k">Companies</div><div className="v"><Num n={s.totalCompanies} /></div><div className="meta">Unique company names</div></div>
+        <div className="card stat"><div className="k">Saved searches</div><div className="v"><MyCount name="saved" value={s.saved} /></div><div className="meta">{user ? 'Open them any time' : <Link className="link" href="/signup">Sign up to keep them</Link>}</div></div>
+        <div className="card stat"><div className="k">Tasks due</div><div className="v"><MyCount name="tasksDue" value={s.tasksDue} /></div><div className="meta">Today or overdue</div></div>
       </div>
 
       <div className="grid2">

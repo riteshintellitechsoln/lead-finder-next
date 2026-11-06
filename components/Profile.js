@@ -81,7 +81,7 @@ export default function Profile({ admin = false }) {
           </>
         ) : (
           <>
-            <Link className="card stat" href="/saved"><div className="k">Saved leads</div><div className="v">{fmt(me.saved)}</div><div className="meta">Open saved leads</div></Link>
+            <Link className="card stat" href="/saved"><div className="k">Saved searches</div><div className="v">{fmt(me.saved)}</div><div className="meta">Open saved searches</div></Link>
             <Link className="card stat" href="/tasks"><div className="k">Open tasks</div><div className="v">{fmt(me.openTasks)}</div><div className="meta">{fmt(me.tasks)} in total</div></Link>
           </>
         )}

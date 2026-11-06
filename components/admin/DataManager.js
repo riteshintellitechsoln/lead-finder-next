@@ -9,8 +9,12 @@ import { fmt, sizeLabel } from '@/lib/format';
 import Num from '@/components/Num';
 
 const FIELDS = [
-  ['name', 'Name *'], ['title', 'Job title'], ['seniority', 'Seniority (guessed if empty)'], ['company', 'Company'],
-  ['industry', 'Industry'], ['employees', '# Employees'], ['city', 'City'], ['email', 'Email'],
+  ['name', 'Name *'], ['title', 'Job title'], ['seniority', 'Seniority (guessed if empty)'], ['department', 'Function (guessed if empty)'],
+  ['company', 'Company'], ['domain', 'Company domain'], ['industry', 'Industry'], ['employees', '# Employees'],
+  ['revenue', 'Revenue, e.g. $12M'], ['techs', 'Technologies, comma separated'],
+  ['city', 'City'], ['county', 'County / District'], ['state', 'State'], ['country', 'Country'], ['zip', 'Zip / PIN code'],
+  ['email', 'Email'], ['email_status', 'Email status (Verified, Guessed...)'], ['verified_at', 'Verified on (YYYY-MM-DD)'],
+  ['phone', 'Phone'], ['direct_phone', 'Direct phone'],
 ];
 const EMPTY = Object.fromEntries(FIELDS.map(([k]) => [k, '']));
 
@@ -49,7 +53,9 @@ function Upload({ onDone }) {
     <form className="card" onSubmit={upload}>
       <h3>Upload CSV</h3>
       <p className="meta">
-        Columns are matched by header name: name (or first + last name), title, seniority, company, industry, employees, city, email.
+        Columns are matched by header name (Apollo exports work as they are): name (or first + last name), title, seniority, department,
+        company, website / domain, industry, employees, annual revenue, technologies, city, county, state, country, zip / PIN code,
+        email, email status, verified date, phone, direct / mobile phone.
         For Excel files, save as <b>CSV UTF-8</b> first. Big files can take a few minutes; keep this page open.
       </p>
       <div className="bar">
@@ -145,7 +151,7 @@ export default function DataManager() {
 
       <div className="bar">
         <input className="txt narrow" placeholder="Search name or company" autoComplete="off" value={q} onChange={(e) => setQ(e.target.value)} />
-        <div className="count">{data ? <>Total <Num n={data.totalElements} /><span>{data.tookMs} ms</span></> : ''}</div>
+        <div className="count">{data ? <>Total <Num n={data.totalElements} /></> : ''}</div>
         <div className="spacer" />
         <button className="btn" type="button" onClick={() => download('/api/people/export' + (query ? '?q=' + encodeURIComponent(query) : ''))}>
           Download CSV
@@ -161,7 +167,7 @@ export default function DataManager() {
               <tr key={p.id} className={editing === p.id ? 'sel' : ''}>
                 <td><PersonCell person={p} /></td>
                 <td><div className="co">{p.company || '–'}</div><div className="meta">{p.industry ? `${p.industry} · ` : ''}{sizeLabel(p.employees)}</div></td>
-                <td>{p.city || '–'}</td>
+                <td>{[p.city, p.state].filter(Boolean).join(', ') || '–'}</td>
                 <td><EmailCell email={p.email} /></td>
                 <td>
                   <div className="rowacts">
