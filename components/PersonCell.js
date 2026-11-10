@@ -1,6 +1,6 @@
 import { initials } from '@/lib/format';
 
-export default function PersonCell({ person, showSaved = false }) {
+export default function PersonCell({ person, showSaved = false, hideTitle = false }) {
   return (
     <div className="person">
       <div className="av">{initials(person.name)}</div>
@@ -8,7 +8,7 @@ export default function PersonCell({ person, showSaved = false }) {
         <div className="pname">
           {person.name} {showSaved && person.saved ? <span className="pill ok">Saved</span> : null}
         </div>
-        <div className="ptitle">{person.title || '–'}</div>
+        {!hideTitle && <div className="ptitle">{person.title || '–'}</div>}
       </div>
     </div>
   );

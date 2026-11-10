@@ -5,13 +5,13 @@
 // respects the other active filters, like Apollo. Big include / exclude lists
 // (company names, domains, emails, titles, zip codes) are uploaded once and
 // referenced by id (see components/filters/ListFilter.js).
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Pager from './Pager';
-import PersonCell, { ContactCell } from './PersonCell';
+import PersonCell, { EmailCell } from './PersonCell';
 import { useToast } from './Toast';
 import { useSession } from './Session';
 import { useFetch } from '@/lib/api';
-import { useCredits } from './Credits';
+import { CreditsButton, useCredits } from './Credits';
 import DownloadDialog from './DownloadDialog';
 import { compact, fmt, revenueLabel, sizeLabel, REVENUE_LABELS, SIZE_LABELS } from '@/lib/format';
 import { LISTS } from '@/lib/filters';
@@ -20,7 +20,22 @@ import FacetChecks from './filters/FacetChecks';
 import ListFilter from './filters/ListFilter';
 import { useUrlFilters } from './filters/useUrlFilters';
 
-const SORTABLE = [['name', 'Name'], ['company', 'Company'], ['city', 'Location'], ['seniority', 'Seniority']];
+// Table columns, in the order of a typical lead file. [sort key or null, header]
+const COLUMNS = [
+  ['name', 'Name'], ['title', 'Job title'], ['seniority', 'Seniority'], [null, 'Function'], [null, 'Email'],
+  [null, 'Phone'], [null, 'Direct phone'], ['company', 'Company'], [null, 'Address 1'], [null, 'Address 2'],
+  ['city', 'City'], [null, 'State'], [null, 'Zip / Postal code'], [null, 'Country'], [null, 'Industry'],
+  ['employees', 'Employee size'], ['revenue', 'Revenue'], [null, 'Company LinkedIn'], [null, 'Employee LinkedIn'], ['updated', 'Updated on'],
+];
+const COLSPAN = COLUMNS.length + 1;
+// Only real web links become clickable (never javascript: and the like)
+const webLink = (url) => (/^https?:\/\//i.test(url || '') ? url : /^(www\.)?linkedin\.com\//i.test(url || '') ? `https://${url}` : null);
+function LinkCell({ url, label }) {
+  const href = webLink(url);
+  if (!url) return '–';
+  return href ? <a className="link" href={href} target="_blank" rel="noopener noreferrer" title={url}>{label}</a> : <span title={url}>{url}</span>;
+}
+const dash = (v) => (v == null || v === '' ? '–' : v);
 
 // Active filter chips above the results: [URL key, label prefix, excluded?, value -> label]
 const CHIP_DEFS = [
@@ -98,6 +113,19 @@ export default function PeopleSearch({ filters: options }) {
   // A guest's saved marks come from their in-memory list
   const rows = (data?.content || []).map((r) => (session.guest ? { ...r, saved: session.saved.has(r.id) ? 1 : 0 } : r));
   const [downloading, setDownloading] = useState(null); // the download window, when open
+  // ◀ ▶ above the table move it sideways; each is off at its end
+  const tableBox = useRef(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const updateEdges = useCallback(() => {
+    const b = tableBox.current;
+    if (b) setEdges({ left: b.scrollLeft > 1, right: b.scrollLeft + b.clientWidth < b.scrollWidth - 1 });
+  }, []);
+  const slide = (dir) => tableBox.current?.scrollBy({ left: dir * Math.round(tableBox.current.clientWidth * 0.6), behavior: 'smooth' });
+  useEffect(() => {
+    updateEdges();
+    window.addEventListener('resize', updateEdges);
+    return () => window.removeEventListener('resize', updateEdges);
+  }, [updateEdges, data]);
   const maxExport = options?.maxExportRows || 100000;
   const myCredits = useCredits(!session.guest);
   const limited = myCredits && !myCredits.unlimited;
@@ -205,8 +233,8 @@ export default function PeopleSearch({ filters: options }) {
       key, value: v, ex, label: prefix + (LISTS.includes(key) ? (lists[v]?.name || 'uploaded list') : label ? label(v) : v),
     }))),
     ...Object.entries(BOOL_LABELS).filter(([k]) => state[k]).map(([k, [, yes, no]]) => ({ key: k, value: state[k], label: state[k] === 'true' ? yes : no, single: true })),
-    ...(state.verifiedFrom ? [{ key: 'verifiedFrom', value: state.verifiedFrom, label: `Verified from ${state.verifiedFrom}`, single: true }] : []),
-    ...(state.verifiedTo ? [{ key: 'verifiedTo', value: state.verifiedTo, label: `Verified up to ${state.verifiedTo}`, single: true }] : []),
+    ...(state.verifiedFrom ? [{ key: 'verifiedFrom', value: state.verifiedFrom, label: `Updated from ${state.verifiedFrom}`, single: true }] : []),
+    ...(state.verifiedTo ? [{ key: 'verifiedTo', value: state.verifiedTo, label: `Updated up to ${state.verifiedTo}`, single: true }] : []),
   ];
   const removeChip = (c) => (c.single ? setSingle(c.key, '') : removeValue(c.key, c.value));
 
@@ -360,7 +388,7 @@ export default function PeopleSearch({ filters: options }) {
             </div>
           </details>
           <details open={n('verifiedFrom', 'verifiedTo') > 0}>
-            <summary>Verified on <Count n={state.verifiedFrom || state.verifiedTo ? 1 : 0} /></summary>
+            <summary>Updated on <Count n={state.verifiedFrom || state.verifiedTo ? 1 : 0} /></summary>
             <div className="fbody"><VerifiedFilter state={state} update={update} /></div>
           </details>
         </aside>
@@ -392,7 +420,7 @@ export default function PeopleSearch({ filters: options }) {
               <option value="employees:desc">Company size, largest</option>
               <option value="employees:asc">Company size, smallest</option>
               <option value="revenue:desc">Revenue, highest</option>
-              <option value="verified:desc">Recently verified</option>
+              <option value="updated:desc">Recently updated</option>
             </select>
             <select aria-label="Rows per page" value={state.pageSize} onChange={(e) => update((p) => p.set('pageSize', e.target.value))}>
               {[10, 25, 50, 100].map((s) => <option key={s} value={s}>{s} per page</option>)}
@@ -425,9 +453,7 @@ export default function PeopleSearch({ filters: options }) {
                 : data && downloadable < total ? `Download first ${compact(downloadable)}` : `Download all ${compact(data?.totalElements)}`}
             </button>
             {limited && (
-              <a className={'pill' + (myCredits.credits < 1 ? ' due' : ' ok')} href="/credits" title="1 credit = 1 person downloaded. Click to ask for more.">
-                {fmt(myCredits.credits)} credits left
-              </a>
+              <CreditsButton credits={myCredits.credits} />
             )}
           </div>
 
@@ -443,41 +469,56 @@ export default function PeopleSearch({ filters: options }) {
           )}
 
           <div className={'pagebar' + (loading ? ' on' : '')} aria-hidden="true" />
-          <div className={'tablewrap' + (loading ? ' loading' : '')}>
-            <table className="ptable">
+          <div className="colnav">
+            <span className="meta">More columns</span>
+            <button className="btn" type="button" aria-label="Scroll the table left" title="Scroll left" disabled={!edges.left} onClick={() => slide(-1)}>◀</button>
+            <button className="btn" type="button" aria-label="Scroll the table right" title="Scroll right" disabled={!edges.right} onClick={() => slide(1)}>▶</button>
+          </div>
+          <div ref={tableBox} onScroll={updateEdges} className={'tablewrap' + (loading ? ' loading' : '')}>
+            <table className="ptable wide">
               <thead>
                 <tr>
                   <th className="cb"><input type="checkbox" aria-label="Select this page" checked={allOnPage} onChange={(e) => togglePage(e.target.checked)} /></th>
-                  {SORTABLE.map(([k, l]) => sortHeader(k, l))}
-                  <th>Contact</th>
+                  {COLUMNS.map(([k, l]) => (k ? sortHeader(k, l) : <th key={l}>{l}</th>))}
                 </tr>
               </thead>
               <tbody>
                 {error ? (
-                  <tr><td colSpan={6} className="empty">Could not load people: {error} <button className="link" type="button" onClick={retry}>Try again</button></td></tr>
+                  <tr><td colSpan={COLSPAN} className="empty">Could not load people: {error} <button className="link" type="button" onClick={retry}>Try again</button></td></tr>
                 ) : !data && loading ? (
-                  Array.from({ length: 8 }, (_, i) => <tr key={i} className="skel"><td colSpan={6}><i /></td></tr>)
+                  Array.from({ length: 8 }, (_, i) => <tr key={i} className="skel"><td colSpan={COLSPAN}><i /></td></tr>)
                 ) : data && !rows.length ? (
-                  <tr><td colSpan={6} className="empty">No people match these filters. Remove a filter or widen the job titles.</td></tr>
+                  <tr><td colSpan={COLSPAN} className="empty">No people match these filters. Remove a filter or widen the job titles.</td></tr>
                 ) : (
                   rows.map((p) => (
                     <tr key={p.id} className={allSelected || selected.has(p.id) ? 'sel' : ''}>
                       <td><input type="checkbox" aria-label={`Select ${p.name}`} checked={allSelected || selected.has(p.id)} onChange={(e) => toggleRow(p.id, e.target.checked)} /></td>
-                      <td><PersonCell person={p} showSaved /></td>
+                      <td><PersonCell person={p} showSaved hideTitle /></td>
+                      <td data-l="Job title" className="wrap">{dash(p.title)}</td>
+                      <td data-l="Seniority">{p.seniority ? <span className="pill">{p.seniority}</span> : '–'}</td>
+                      <td data-l="Function">{dash(p.department)}</td>
+                      <td data-l="Email">
+                        <EmailCell email={p.email} />
+                        {p.email && p.email_status && <div className="meta"><span className={'pill ' + (p.email_status === 'Verified' ? 'ok' : p.email_status === 'Invalid' ? 'due' : '')}>{p.email_status}</span></div>}
+                      </td>
+                      <td data-l="Phone">{dash(p.phone)}</td>
+                      <td data-l="Direct phone">{dash(p.direct_phone)}</td>
                       <td data-l="Company">
                         <div className="co">{p.company || '–'}</div>
                         {p.domain && <div className="meta dom">{p.domain}</div>}
-                        <div className="meta">{[p.industry, p.employees != null && sizeLabel(p.employees), revenueLabel(p.revenue)].filter(Boolean).join(' · ')}</div>
                       </td>
-                      <td data-l="Location">
-                        {[p.city, p.state].filter(Boolean).join(', ') || '–'}
-                        {(p.zip || p.country) && <div className="meta">{[p.zip, p.country].filter(Boolean).join(' · ')}</div>}
-                      </td>
-                      <td data-l="Seniority">
-                        {p.seniority ? <span className="pill">{p.seniority}</span> : '–'}
-                        {p.department && <div className="meta">{p.department}</div>}
-                      </td>
-                      <td data-l="Contact"><ContactCell person={p} /></td>
+                      <td data-l="Address 1" className="wrap">{dash(p.address1)}</td>
+                      <td data-l="Address 2" className="wrap">{dash(p.address2)}</td>
+                      <td data-l="City">{dash(p.city)}</td>
+                      <td data-l="State">{dash(p.state)}</td>
+                      <td data-l="Zip / Postal code">{dash(p.zip)}</td>
+                      <td data-l="Country">{dash(p.country)}</td>
+                      <td data-l="Industry" className="wrap">{dash(p.industry)}</td>
+                      <td data-l="Employee size">{p.employees != null ? sizeLabel(p.employees) : '–'}</td>
+                      <td data-l="Revenue">{revenueLabel(p.revenue) || '–'}</td>
+                      <td data-l="Company LinkedIn"><LinkCell url={p.company_linkedin} label="Company page" /></td>
+                      <td data-l="Employee LinkedIn"><LinkCell url={p.linkedin} label="Profile" /></td>
+                      <td data-l="Updated on">{dash(p.updated_at)}</td>
                     </tr>
                   ))
                 )}
@@ -505,8 +546,8 @@ export default function PeopleSearch({ filters: options }) {
   );
 }
 
-// Email verified date: up to a date, from a date, between two dates, or on one day.
-// Stored as verifiedFrom / verifiedTo (both inclusive).
+// "Updated on" date from the data file: up to a date, from a date, between two dates, or on one day.
+// Stored as verifiedFrom / verifiedTo (both inclusive; the old names keep saved searches working).
 const VERIFIED_MODES = [['to', 'Up to'], ['from', 'From'], ['between', 'Between'], ['on', 'On date']];
 function VerifiedFilter({ state, update }) {
   const { verifiedFrom: from, verifiedTo: to } = state;
@@ -532,15 +573,15 @@ function VerifiedFilter({ state, update }) {
   );
   return (
     <>
-      <div className="seg sm" role="tablist" aria-label="Verified on">
+      <div className="seg sm" role="tablist" aria-label="Updated on">
         {VERIFIED_MODES.map(([m, l]) => (
           <button key={m} type="button" role="tab" aria-selected={mode === m} className={mode === m ? 'on' : ''} onClick={() => changeMode(m)}>{l}</button>
         ))}
       </div>
       <div className="dates">
-        {mode === 'to' && date('Verified up to (and on)', to, (v) => set('', v))}
-        {mode === 'from' && date('Verified on or after', from, (v) => set(v, ''))}
-        {mode === 'on' && date('Verified on', from, (v) => set(v, v))}
+        {mode === 'to' && date('Updated up to (and on)', to, (v) => set('', v))}
+        {mode === 'from' && date('Updated on or after', from, (v) => set(v, ''))}
+        {mode === 'on' && date('Updated on', from, (v) => set(v, v))}
         {mode === 'between' && (
           <>
             {date('From', from, (v) => set(v, to), { max: to || undefined })}
