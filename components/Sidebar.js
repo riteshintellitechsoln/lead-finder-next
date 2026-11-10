@@ -64,6 +64,7 @@ const MENUS = {
     { href: '/saved', icon: 'saved', label: 'Saved searches' },
     { group: 'Manage' },
     { href: '/admin/users', icon: 'people', label: 'Users' },
+    { href: '/admin/saves', icon: 'saved', label: "Users' saves" },
     { href: '/admin/credits', icon: 'credits', label: 'Credit requests', badge: 'pendingCredits' },
     { href: '/admin/data', icon: 'data', label: 'Data' },
     { group: 'Account' },

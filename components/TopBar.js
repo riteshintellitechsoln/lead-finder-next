@@ -7,7 +7,7 @@ import { useSession } from './Session';
 const TITLES = {
   '/': 'Home', '/people': 'People', '/companies': 'Companies', '/saved': 'Saved searches', '/tasks': 'Tasks',
   '/profile': 'My profile', '/credits': 'Credits',
-  '/admin': 'Admin dashboard', '/admin/users': 'Users', '/admin/credits': 'Credit requests', '/admin/data': 'Data', '/admin/profile': 'My profile',
+  '/admin': 'Admin dashboard', '/admin/users': 'Users', '/admin/saves': "Users' saves", '/admin/credits': 'Credit requests', '/admin/data': 'Data', '/admin/profile': 'My profile',
 };
 
 export default function TopBar({ admin = false }) {

@@ -52,6 +52,8 @@ export default function DownloadDialog({ url, what = 'these results', partial = 
   const [error, setError] = useState('');
   const [companies, setCompanies] = useState('');
   const [perCompany, setPerCompany] = useState('');
+  const [pick, setPick] = useState('seniority'); // who comes first in each company
+  const [updatedDays, setUpdatedDays] = useState(''); // '' = any time
   const [seniority, setSeniority] = useState([]);
   const [department, setDepartment] = useState([]);
   const [titles, setTitles] = useState('');
@@ -63,6 +65,8 @@ export default function DownloadDialog({ url, what = 'these results', partial = 
   const choices = [
     ...(companies ? [['dlCompanies', companies]] : []),
     ...(perCompany ? [['dlPerCompany', perCompany]] : []),
+    ...(perCompany && pick === 'updated' ? [['dlPick', 'updated']] : []),
+    ...(updatedDays ? [['dlUpdatedDays', updatedDays]] : []),
     ...seniority.map((v) => ['dlSeniority', v]),
     ...department.map((v) => ['dlFunction', v]),
     ...typedTitles.map((v) => ['dlTitle', v]),
@@ -127,7 +131,24 @@ export default function DownloadDialog({ url, what = 'these results', partial = 
         {!options && !error && <div className="meta">Loading…</div>}
         {options && (
           <>
-            <div className="meta"><b>{fmt(options.rows)}</b> people from <b>{fmt(options.companies)}</b> {options.companies === 1 ? 'company' : 'companies'} in {what}.</div>
+            {/* What is available now. Fixed: the choices below do not change it. */}
+            <div className="dlstatic">
+              <div className="meta">Available in {what}</div>
+              <div className="dlnums">
+                <div><b>{fmt(options.companies)}</b> {options.companies === 1 ? 'company' : 'companies'}</div>
+                <div><b>{fmt(options.rows)}</b> people</div>
+              </div>
+              {options.companyList?.length > 0 && (
+                <ol className="dlcompanies" tabIndex={0} aria-label="Companies and the number of people from each">
+                  {options.companyList.map((c) => (
+                    <li key={c.value}><span>{c.value}</span> <span className="meta">{fmt(c.n)} {c.n === 1 ? 'person' : 'people'}</span></li>
+                  ))}
+                </ol>
+              )}
+              {options.companies > (options.companyList?.length || 0) && (
+                <div className="meta">Showing the top {fmt(options.companyList?.length || 0)} of {fmt(options.companies)} companies.</div>
+              )}
+            </div>
 
             {options.companies > 0 && (
               <div className="dlrow">
@@ -140,10 +161,27 @@ export default function DownloadDialog({ url, what = 'these results', partial = 
                 <label>
                   People from each company
                   <input className="txt" type="number" min={1} step={1} placeholder="All" value={perCompany} onChange={(e) => setPerCompany(e.target.value)} />
-                  <span className="meta">Highest seniority first</span>
+                  <select className="txt" aria-label="Who comes first in each company" value={pick} onChange={(e) => setPick(e.target.value)} disabled={!perCompany}>
+                    <option value="seniority">Highest seniority first</option>
+                    <option value="updated">Most recently updated first</option>
+                  </select>
                 </label>
               </div>
             )}
+            <div className="dlrow">
+              <label>
+                Updated on
+                <select className="txt" value={updatedDays} onChange={(e) => setUpdatedDays(e.target.value)}>
+                  <option value="">Any time ({fmt(options.rows)})</option>
+                  {[[30, 'Last 30 days'], [90, 'Last 3 months'], [180, 'Last 6 months'], [365, 'Last 12 months']].map(([d, l]) => (
+                    <option key={d} value={d}>{l} ({fmt(options[`updated${d}`] ?? 0)})</option>
+                  ))}
+                </select>
+                <span className="meta">
+                  {options.updatedAny ? `${fmt(options.updatedAny)} of these people have an Updated on date.` : 'No one in these results has an Updated on date, so any choice here gives 0 people.'}
+                </span>
+              </label>
+            </div>
             {!valid && <div className="meta" role="alert">Enter a whole number, 1 or more.</div>}
             {options.noCompany > 0 && (companies || perCompany) && (
               <div className="meta">{fmt(options.noCompany)} people without a company are left out when you set a company limit.</div>
@@ -176,12 +214,12 @@ export default function DownloadDialog({ url, what = 'these results', partial = 
                   <div><b>{fmt(rows)}</b> people from <b>{fmt(fromCompanies)}</b> {fromCompanies === 1 ? 'company' : 'companies'}{rows >= options.maxRows && ` (a download can have at most ${fmt(options.maxRows)})`}</div>
                   {!rows && <div className="meta">No people match these choices.</div>}
                   {limited && !over && rows > 0 && <div className="meta">Uses {fmt(rows)} credits. You will have {fmt(credits - rows)} left.</div>}
-                  {noCredits && <div role="alert">You have no download credits left. <Link className="link" href="/credits">Ask the admin for credits</Link></div>}
+                  {noCredits && <div role="alert">You have no download credits left. <Link className="link" href="/credits?tab=ask">Ask the admin for credits</Link></div>}
                   {!noCredits && over && !partial && (
-                    <div role="alert">Download limit: you have only {fmt(credits)} credits. Lower the numbers above by {fmt(rows - credits)} people, or <Link className="link" href="/credits">ask the admin for more</Link>.</div>
+                    <div role="alert">Download limit: you have only {fmt(credits)} credits. Lower the numbers above by {fmt(rows - credits)} people, or <Link className="link" href="/credits?tab=ask">ask the admin for more</Link>.</div>
                   )}
                   {!noCredits && over && partial && (
-                    <div role="alert">You have only {fmt(credits)} credits, so you will get the first {fmt(credits)} of these {fmt(rows)}. Lower the numbers above, or <Link className="link" href="/credits">ask the admin for more</Link>.</div>
+                    <div role="alert">You have only {fmt(credits)} credits, so you will get the first {fmt(credits)} of these {fmt(rows)}. Lower the numbers above, or <Link className="link" href="/credits?tab=ask">ask the admin for more</Link>.</div>
                   )}
                 </>
               )}

@@ -13,8 +13,10 @@ const FIELDS = [
   ['company', 'Company'], ['domain', 'Company domain'], ['industry', 'Industry'], ['employees', '# Employees'],
   ['revenue', 'Revenue, e.g. $12M'], ['techs', 'Technologies, comma separated'],
   ['city', 'City'], ['county', 'County / District'], ['state', 'State'], ['country', 'Country'], ['zip', 'Zip / PIN code'],
-  ['email', 'Email'], ['email_status', 'Email status (Verified, Guessed...)'], ['verified_at', 'Verified on (YYYY-MM-DD)'],
+  ['email', 'Email'], ['email_status', 'Email status (as in your file)'], ['verified_at', 'Verified on (YYYY-MM-DD)'],
   ['phone', 'Phone'], ['direct_phone', 'Direct phone'],
+  ['address1', 'Address 1'], ['address2', 'Address 2'], ['linkedin', 'Employee LinkedIn URL'], ['company_linkedin', 'Company LinkedIn URL'],
+  ['updated_at', 'Updated on (YYYY-MM-DD)'],
 ];
 const EMPTY = Object.fromEntries(FIELDS.map(([k]) => [k, '']));
 
@@ -24,6 +26,7 @@ function Upload({ onDone }) {
   const [replace, setReplace] = useState(false);
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState([]);
+  const [result, setResult] = useState(null); // the last import, with the rows that were already in the data
 
   async function upload(e) {
     e.preventDefault();
@@ -32,13 +35,15 @@ function Upload({ onDone }) {
     if (replace && !window.confirm('Replace ALL people? Saved lists of all users are cleared too.')) return;
     setBusy(true);
     setLog([`Uploading ${file.name} (${fmt(Math.round(file.size / 1024))} KB)…`]);
+    setResult(null);
     try {
       // The raw file is the request body, so the server can read it as a stream
       const res = await fetch(`/api/admin/import?replace=${replace}`, { method: 'POST', body: file, headers: { 'Content-Type': 'text/csv' } });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`);
       setLog(data.log);
-      toast(`Imported ${fmt(data.imported)} people`);
+      setResult({ ...data, replace, file: file.name });
+      toast(`Imported ${fmt(data.imported)} people. ${fmt(data.existing?.count || 0)} were already in the data.`);
       fileRef.current.value = '';
       notifyStatsChanged();
       onDone();
@@ -64,8 +69,44 @@ function Upload({ onDone }) {
         <div className="spacer" />
         <button className="btn primary" type="submit" disabled={busy}>{busy ? 'Importing…' : 'Upload & import'}</button>
       </div>
+      {result?.existing && <ExistingRows result={result} />}
       {log.length > 0 && <pre className="api log">{log.join('\n')}</pre>}
     </form>
+  );
+}
+
+// After an upload: which rows of the file were already in the data
+function ExistingRows({ result }) {
+  const { existing: e, imported } = result;
+  return (
+    <div className="existing">
+      <h4>Already in the data</h4>
+      <div className="meta">
+        <b>{fmt(e.count)}</b> of {fmt(imported)} rows in {result.file} were already in the data
+        {e.count > 0 && <> ({fmt(e.byEmail)} with the same email, {fmt(e.byNameCompany)} with the same name and company, for rows without an email)</>}.
+        {' '}{fmt(imported - e.count)} were new.
+        {e.count > 0 && !result.replace && ' They were added again, so these people now appear twice.'}
+      </div>
+      {e.count > 0 && (
+        <div className="tablewrap">
+          <table>
+            <thead><tr><th>Row in file</th><th>Name</th><th>Company</th><th>Email</th><th>Matched by</th></tr></thead>
+            <tbody>
+              {e.rows.map((r) => (
+                <tr key={`${r.row}-${r.matched_by}`}>
+                  <td className="num">{fmt(r.row)}</td>
+                  <td>{r.name || '–'}</td>
+                  <td>{r.company || '–'}</td>
+                  <td>{r.email || '–'}</td>
+                  <td><span className="pill">{r.matched_by}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {e.count > e.rows.length && <div className="meta">Showing the first {fmt(e.rows.length)} of {fmt(e.count)}.</div>}
+    </div>
   );
 }
 

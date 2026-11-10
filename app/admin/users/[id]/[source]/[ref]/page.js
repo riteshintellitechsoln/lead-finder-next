@@ -65,10 +65,14 @@ function AdminUserRecordsPage() {
     return () => clearTimeout(timer);
   }, [text, find, setFilters]);
 
+  // Opened from "Users' saves": back=/admin/saves?... goes back there with its filters
+  const fromSaves = (sp.get('back') || '').startsWith('/admin/saves') ? sp.get('back') : '';
   const backParams = new URLSearchParams(urlQuery);
-  ['find', 'vfrom', 'vto'].forEach((k) => backParams.delete(k));
+  ['find', 'vfrom', 'vto', 'back'].forEach((k) => backParams.delete(k));
   const backQuery = backParams.toString();
-  const back = <Link className="link" href={`/admin/users/${id}${backQuery ? `?${backQuery}` : ''}`}>← Back to user</Link>;
+  const back = fromSaves
+    ? <Link className="link" href={fromSaves}>← Back to users&apos; saves</Link>
+    : <Link className="link" href={`/admin/users/${id}${backQuery ? `?${backQuery}` : ''}`}>← Back to user</Link>;
   if (error) return <section className="view">{back}<div className="card empty">{error}</div></section>;
   if (!data) return <section className="view"><div className="card empty">Loading…</div></section>;
 
@@ -86,7 +90,7 @@ function AdminUserRecordsPage() {
         <div className="bar">
           <input className="txt" type="search" placeholder="Search by person or company name" aria-label="Search by person or company name"
             style={{ flex: '1 1 260px', width: 'auto' }} value={text} onChange={(e) => setText(e.target.value)} />
-          <span className="meta">Email verified on</span>
+          <span className="meta">Updated on</span>
           <label className="meta" htmlFor="verFrom">From</label>
           <input id="verFrom" className="txt" type="date" style={{ width: 'auto' }} max={vto || undefined} value={vfrom} onChange={(e) => setFilters({ vfrom: e.target.value })} />
           <label className="meta" htmlFor="verTo">To</label>
