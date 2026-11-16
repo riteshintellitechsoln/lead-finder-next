@@ -410,6 +410,25 @@ td.techs .pill { margin: 0 4px 3px 0; }
 .dlcompanies li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 4px 3px 0; border-top: 1px solid var(--line); }
 .existing { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
 .existing h4 { margin: 0; }
+/* Admin upload: result line, rows that were not uploaded, allowed values */
+.uploadsum { margin-top: 12px; padding: 10px 12px; border-radius: 6px; background: var(--ok-soft); display: flex; flex-direction: column; gap: 4px; }
+.uploadsum.bad { background: var(--warn-soft); }
+.uploadsum.line { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+.warntxt { color: var(--warn); }
+.uploadnums { display: flex; flex-wrap: wrap; gap: 12px 32px; margin-top: 12px; }
+.uploadnums div { display: flex; flex-direction: column; }
+.uploadnums b { font-size: 22px; font-family: var(--display); }
+/* Admin data list: pick rows, act on them */
+th.pick, td.pick { width: 36px; }
+.selbar { min-height: 40px; }
+.btn.dangerbtn { color: var(--warn); border-color: var(--warn); }
+.btn.dangerbtn:disabled { color: var(--muted); border-color: var(--line); }
+table.rejected td { white-space: nowrap; }
+table.rejected td.badval { color: var(--warn); background: var(--warn-soft); font-weight: 600; }
+details.allowed { margin: 4px 0 8px; }
+details.allowed summary { cursor: pointer; color: var(--accent); }
+.allowedcols { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 8px; }
+.allowedcols ul { margin: 4px 0 0; padding-left: 18px; max-height: 220px; overflow-y: auto; font-size: 13px; }
 /* People table with every column: scrolls sideways, name stays in view */
 table.ptable.wide { min-width: 2600px; }
 table.ptable.wide td { white-space: nowrap; }

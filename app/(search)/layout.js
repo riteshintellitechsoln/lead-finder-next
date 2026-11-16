@@ -2,7 +2,8 @@
 // each with their own menu. Same URLs for both (/people, /companies, /saved).
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
-import { pageUser } from '@/lib/auth';
+import IdleLogout from '@/components/IdleLogout';
+import { IDLE_MESSAGE, IDLE_MINUTES, pageUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,7 @@ export default async function SearchLayout({ children }) {
       <div className="main">
         <TopBar admin={admin} />
         {children}
+        <IdleLogout minutes={IDLE_MINUTES} message={IDLE_MESSAGE} />
       </div>
     </div>
   );
