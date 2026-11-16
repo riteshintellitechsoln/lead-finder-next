@@ -25,7 +25,7 @@ export default function TopBar({ admin = false }) {
 
   return (
     <div className="top">
-      <h1>{TITLES[path] || (path.startsWith('/admin/users/') ? 'User details' : 'Lead Finder')}</h1>
+      <h1>{TITLES[path] || (path.startsWith('/admin/users/') ? 'User details' : path.startsWith('/admin/data/uploads/') ? 'Upload details' : 'Lead Finder')}</h1>
       <div className="gsearch">
         <svg viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="7" />

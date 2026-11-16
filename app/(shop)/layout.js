@@ -1,7 +1,8 @@
 // Shell for the shop. Signed-in customers only (proxy.js sends others to /login); the admin is sent to /admin.
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
-import { pageUser } from '@/lib/auth';
+import IdleLogout from '@/components/IdleLogout';
+import { IDLE_MESSAGE, IDLE_MINUTES, pageUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ export default async function ShopLayout({ children }) {
       <div className="main">
         <TopBar />
         {children}
+        <IdleLogout minutes={IDLE_MINUTES} message={IDLE_MESSAGE} />
       </div>
     </div>
   );
