@@ -8,11 +8,11 @@ import { useToast } from '@/components/Toast';
 import { api, download, notifyStatsChanged } from '@/lib/api';
 import { fmt, formatDateTime, sizeLabel } from '@/lib/format';
 import Num from '@/components/Num';
-import { COUNTRIES, FUNCTIONS, INDUSTRIES, SENIORITY_LEVELS } from '@/lib/options';
+import { COUNTRIES, FUNCTIONS, INDUSTRIES, SENIORITY_LEVELS, SIZE_EDGES, SIZE_KEYS, SIZE_LABELS } from '@/lib/options';
 
 const FIELDS = [
-  ['name', 'Name *'], ['title', 'Job title'], ['seniority', 'Seniority (guessed if empty)'], ['department', 'Function (guessed if empty)'],
-  ['company', 'Company'], ['domain', 'Company domain'], ['industry', 'Industry'], ['employees', '# Employees'],
+  ['name', 'Name *'], ['title', 'Job title'], ['seniority', 'Seniority level *'], ['department', 'Function *'],
+  ['company', 'Company'], ['domain', 'Company domain'], ['industry', 'Industry *'], ['employees', 'Company headcount *'],
   ['revenue', 'Revenue, e.g. $12M'], ['techs', 'Technologies, comma separated'],
   ['city', 'City'], ['county', 'County / District'], ['state', 'State'], ['country', 'Country'], ['zip', 'Zip / PIN code'],
   ['email', 'Email'], ['email_status', 'Email status (as in your file)'], ['verified_at', 'Verified on (YYYY-MM-DD)'],
@@ -20,6 +20,21 @@ const FIELDS = [
   ['address1', 'Address 1'], ['address2', 'Address 2'], ['linkedin', 'Employee LinkedIn URL'], ['company_linkedin', 'Company LinkedIn URL'],
   ['updated_at', 'Updated on (YYYY-MM-DD)'],
 ];
+// Required, picked from the same lists as an upload (checked again on the server)
+const PICK = {
+  seniority: SENIORITY_LEVELS.map((v) => [v, v]),
+  department: FUNCTIONS.map((v) => [v, v]),
+  industry: INDUSTRIES.map((v) => [v, v]),
+  employees: SIZE_KEYS.map((k) => [k, SIZE_LABELS[k]]),
+  country: COUNTRIES.map((v) => [v, v]),
+};
+// A saved number of employees (e.g. 75) -> its range key ("51-200")
+const sizeOf = (n) => {
+  const v = Number(String(n ?? '').replace(/,/g, ''));
+  if (!v) return SIZE_KEYS.includes(String(n)) ? String(n) : '';
+  const i = SIZE_EDGES.findIndex((e) => v <= e);
+  return SIZE_KEYS[i < 0 ? SIZE_KEYS.length - 1 : i];
+};
 const EMPTY = Object.fromEntries(FIELDS.map(([k]) => [k, '']));
 const MAX_PICK = 1000; // rows picked one by one (the server takes up to 1,000 ids); "Select all" has no limit
 const MAX_DOWNLOAD = 100000; // MAX_EXPORT_ROWS on the server
@@ -99,6 +114,10 @@ function Upload({ onDone }) {
         Every row needs <b>{REQUIRED.map(([, l]) => l).join(', ')}</b> with a value from the allowed list.
         Wrong rows and people already in the data are not uploaded. From Excel, save as <b>CSV UTF-8</b>.
       </p>
+      <div className="bar">
+        <button className="btn" type="button" onClick={() => download('/api/admin/import/template')}>Download template</button>
+        <button className="btn" type="button" onClick={() => download('/api/admin/import/template?kind=values')}>Download allowed values</button>
+      </div>
       <details className="allowed">
         <summary>See the allowed values</summary>
         <div className="allowedcols">
@@ -162,6 +181,7 @@ export default function DataManager() {
   const [error, setError] = useState('');
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null); // person id, or null when adding
+  const [oldEmployees, setOldEmployees] = useState(null); // the saved headcount of the person being edited
   const formRef = useRef();
   // Updated on, from / to (YYYY-MM-DD). Sent as verifiedFrom / verifiedTo, which filter Updated on.
   const [from, setFrom] = useState('');
@@ -277,7 +297,8 @@ export default function DataManager() {
 
   function edit(p) {
     setEditing(p.id);
-    setForm(Object.fromEntries(FIELDS.map(([k]) => [k, p[k] ?? ''])));
+    setOldEmployees(p.employees ?? null);
+    setForm({ ...Object.fromEntries(FIELDS.map(([k]) => [k, p[k] ?? ''])), employees: sizeOf(p.employees) });
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
   }
   function cancel() {
@@ -288,7 +309,9 @@ export default function DataManager() {
   async function save(e) {
     e.preventDefault();
     try {
-      if (editing) await api(`/admin/people/${editing}`, { method: 'PATCH', body: form });
+      // Editing: keep the exact saved headcount (e.g. 75) while its range is unchanged
+      const keep = editing && oldEmployees != null && sizeOf(oldEmployees) === form.employees;
+      if (editing) await api(`/admin/people/${editing}`, { method: 'PATCH', body: keep ? { ...form, employees: String(oldEmployees) } : form });
       else await api('/admin/people', { method: 'POST', body: form });
       toast(editing ? 'Person updated' : 'Person added');
       cancel();
@@ -318,10 +341,17 @@ export default function DataManager() {
       <form className="card" ref={formRef} onSubmit={save}>
         <h3>{editing ? `Edit person #${editing}` : 'Add a person'}</h3>
         <div className="personform">
-          {FIELDS.map(([k, label]) => (
+          {FIELDS.map(([k, label]) => (PICK[k] ? (
+            <select key={k} className={`txt${form[k] ? '' : ' empty'}`} aria-label={label} required {...field(k)}>
+              <option value="">{label}</option>
+              {/* an old value that is not in the list: shown so it can be changed */}
+              {form[k] && !PICK[k].some(([v]) => v === form[k]) && <option value={form[k]} disabled>{form[k]} (not in the list)</option>}
+              {PICK[k].map(([v, text]) => <option key={v} value={v}>{text}</option>)}
+            </select>
+          ) : (
             <input key={k} className="txt" placeholder={label} aria-label={label} required={k === 'name'}
-              type={k === 'employees' ? 'number' : k === 'email' ? 'email' : 'text'} {...field(k)} />
-          ))}
+              type={k === 'email' ? 'email' : 'text'} {...field(k)} />
+          )))}
         </div>
         <div className="bar mt">
           <div className="spacer" />

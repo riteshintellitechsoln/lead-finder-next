@@ -381,6 +381,8 @@ code { font-family: var(--mono); font-size: 12px; background: var(--chip); paddi
 .dates .txt { padding: 5px 6px; font-size: 12px; }
 .dates label:only-child { grid-column: 1 / -1; }
 select.txt { padding: 6px 8px; }
+select.txt.empty { color: var(--muted); } /* the placeholder option */
+select.txt option { color: var(--fg); }
 .contact { display: flex; flex-direction: column; gap: 3px; min-width: 190px; }
 .contact .pill { font-size: 10.5px; padding: 1px 6px; }
 .phone { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
