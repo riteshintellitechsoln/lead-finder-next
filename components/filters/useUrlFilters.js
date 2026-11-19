@@ -56,6 +56,8 @@ export function useUrlFilters(basePath) {
   const removeValue = (key, value) => update((p) => setMulti(p, key, p.getAll(key).filter((v) => !same(v, value))));
   const setSingle = (key, value) => update((p) => (value ? p.set(key, value) : p.delete(key)));
   const clearAll = () => update((p) => [...new Set(p.keys())].filter((k) => !VIEW_KEYS.includes(k)).forEach((k) => p.delete(k)));
+  // One filter section at once (e.g. every Location key)
+  const clearKeys = (keys) => update((p) => keys.forEach((k) => p.delete(k)));
 
-  return { spStr, state, filterQs, update, toggle, addValues, removeValue, setSingle, clearAll, SINGLE };
+  return { spStr, state, filterQs, update, toggle, addValues, removeValue, setSingle, clearAll, clearKeys, SINGLE };
 }

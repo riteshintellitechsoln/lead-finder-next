@@ -18,6 +18,8 @@ import { LISTS } from '@/lib/filters';
 import Num from './Num';
 import FacetChecks from './filters/FacetChecks';
 import ListFilter from './filters/ListFilter';
+import CountryUpload from './filters/CountryUpload';
+import { COUNTRIES } from '@/lib/options';
 import { useUrlFilters } from './filters/useUrlFilters';
 
 // Table columns, in the order of a typical lead file. [sort key or null, header]
@@ -248,6 +250,19 @@ export default function PeopleSearch({ filters: options }) {
   const n = (...keys) => keys.reduce((a, k) => a + (Array.isArray(state[k]) ? state[k].length : state[k] ? 1 : 0), 0);
 
   const Count = ({ n: c }) => <span className="n">{c || ''}</span>;
+  // A section's title with its count, and "Clear" for every value in that section at once
+  const head = (label, keys, count = n(...keys)) => (
+    <summary>
+      {label}
+      <span className="sumr">
+        <Count n={count} />
+        {count > 0 && (
+          <button className="link fclear" type="button" aria-label={`Clear ${label}`}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); url.clearKeys(keys); }}>Clear</button>
+        )}
+      </span>
+    </summary>
+  );
   const box = { state, url, lists, onListCreated };
   const checks = (k, extra = {}) => <FacetChecks k={k} items={listFor(k)} selected={state[k]} onToggle={toggle} filterQs={filterQs} {...extra} />;
 
@@ -274,13 +289,13 @@ export default function PeopleSearch({ filters: options }) {
           <input className="txt" placeholder="Search name or company" aria-label="Search name or company" autoComplete="off" value={qInput} onChange={(e) => setQInput(e.target.value)} />
 
           <details open>
-            <summary>Email list <Count n={n('email', 'emailNot', 'emailList', 'emailNotList')} /></summary>
+            {head('Email list', ['email', 'emailNot', 'emailList', 'emailNotList'])}
             <div className="fbody">
               <ListFilter kind="email" {...box} placeholder="name@company.com" hint="Exclude people you already have" />
             </div>
           </details>
           <details open>
-            <summary>Job titles <Count n={n('personTitles', 'personNotTitles', 'titleList', 'titleNotList')} /></summary>
+            {head('Job titles', ['personTitles', 'personNotTitles', 'titleList', 'titleNotList'])}
             <div className="fbody">
               <ListFilter kind="title" {...box} placeholder="e.g. HR Manager, Recruiter" suggestions={options?.titles}
                 chipCount={(v) => titleCounts[v.toLowerCase()]} hint="Paste many: comma or one per line" />
@@ -299,15 +314,15 @@ export default function PeopleSearch({ filters: options }) {
             </div>
           </details>
           <details>
-            <summary>Function <Count n={n('department')} /></summary>
+            {head('Function', ['department'])}
             <div className="fbody">{checks('department', { localSearch: true, placeholder: 'Search function…' })}</div>
           </details>
           <details>
-            <summary>Seniority level <Count n={n('seniority')} /></summary>
+            {head('Seniority level', ['seniority'])}
             <div className="fbody">{checks('seniority', { localSearch: true, placeholder: 'Search seniority…' })}</div>
           </details>
           <details open={n('company', 'companyNot', 'companyList', 'companyNotList', 'domain', 'domainNot', 'domainList', 'domainNotList') > 0}>
-            <summary>Company <Count n={n('company', 'companyNot', 'companyList', 'companyNotList', 'domain', 'domainNot', 'domainList', 'domainNotList')} /></summary>
+            {head('Company', ['company', 'companyNot', 'companyList', 'companyNotList', 'domain', 'domainNot', 'domainList', 'domainNotList'])}
             <div className="fbody">
               <div className="lbl">Company name</div>
               <ListFilter kind="company" {...box} placeholder="Type a name, or upload a list"
@@ -317,17 +332,18 @@ export default function PeopleSearch({ filters: options }) {
             </div>
           </details>
           <details>
-            <summary>Industry <Count n={n('industry')} /></summary>
+            {head('Industry', ['industry'])}
             <div className="fbody">{checks('industry', { searchable: true, placeholder: 'Search industry…' })}</div>
           </details>
           <details open={n('zip', 'zipNot', 'zipList', 'zipNotList', 'country', 'state', 'county', 'city') > 0}>
-            <summary>Location <Count n={n('zip', 'zipNot', 'zipList', 'zipNotList', 'country', 'state', 'county', 'city')} /></summary>
+            {head('Location', ['zip', 'zipNot', 'zipList', 'zipNotList', 'country', 'state', 'county', 'city'])}
             <div className="fbody">
               <div className="lbl">Zip / PIN code</div>
               <ListFilter kind="zip" {...box} placeholder="e.g. 411001, 560034" hint="Or pick the place below" />
               <ZipInfo zips={state.zip} />
               <div className="lbl">Country</div>
               {checks('country', { searchable: true, limit: 5, placeholder: 'Search country…' })}
+              <CountryUpload known={[...new Set([...COUNTRIES, ...listFor('country').map((o) => o.value)])]} selected={state.country} addValues={url.addValues} />
               <div className="lbl">State</div>
               {checks('state', { searchable: true, limit: 5, placeholder: 'Search state…' })}
               <div className="lbl">County / District</div>
@@ -337,20 +353,20 @@ export default function PeopleSearch({ filters: options }) {
             </div>
           </details>
           <details>
-            <summary>Company headcount <Count n={n('employees')} /></summary>
+            {head('Company headcount', ['employees'])}
             <div className="fbody">
               <FacetChecks k="employees" selected={state.employees} onToggle={toggle} items={listFor('employees', SIZE_LABELS)} />
             </div>
           </details>
           <details>
-            <summary>Revenue <Count n={n('revenue')} /></summary>
+            {head('Revenue', ['revenue'])}
             <div className="fbody">
               <FacetChecks k="revenue" selected={state.revenue} onToggle={toggle} items={listFor('revenue', REVENUE_LABELS)} />
               <span className="meta">Annual revenue in USD</span>
             </div>
           </details>
           <details open={n('tech', 'techNot') > 0}>
-            <summary>Install base <Count n={n('tech', 'techNot')} /></summary>
+            {head('Install base', ['tech', 'techNot'])}
             <div className="fbody">
               <div className="seg" role="tablist" aria-label="Technologies: include or exclude">
                 <button type="button" role="tab" aria-selected={techMode === 'tech'} className={techMode === 'tech' ? 'on' : ''} onClick={() => setTechMode('tech')}>
@@ -366,7 +382,7 @@ export default function PeopleSearch({ filters: options }) {
             </div>
           </details>
           <details open={n('hasEmail', 'hasPhone', 'hasDirect', 'emailStatus') > 0}>
-            <summary>Contact info <Count n={n('hasEmail', 'hasPhone', 'hasDirect', 'emailStatus')} /></summary>
+            {head('Contact info', ['hasEmail', 'hasPhone', 'hasDirect', 'emailStatus'])}
             <div className="fbody">
               {Object.entries(BOOL_LABELS).map(([k, [label, yes, no]]) => (
                 <div key={k} className="tri">
@@ -388,7 +404,7 @@ export default function PeopleSearch({ filters: options }) {
             </div>
           </details>
           <details open={n('verifiedFrom', 'verifiedTo') > 0}>
-            <summary>Updated on <Count n={state.verifiedFrom || state.verifiedTo ? 1 : 0} /></summary>
+            {head('Updated on', ['verifiedFrom', 'verifiedTo'], state.verifiedFrom || state.verifiedTo ? 1 : 0)}
             <div className="fbody"><VerifiedFilter state={state} update={update} /></div>
           </details>
         </aside>
@@ -465,6 +481,7 @@ export default function PeopleSearch({ filters: options }) {
                   <button type="button" aria-label={`Remove ${c.label}`} onClick={() => removeChip(c)}>×</button>
                 </span>
               ))}
+              <button className="link" type="button" onClick={url.clearAll}>Clear all</button>
             </div>
           )}
 
