@@ -9,8 +9,9 @@ export const dynamic = 'force-dynamic';
 
 // * = required: a row with that cell empty or not in the allowed list is not uploaded
 const HEADERS = [
-  'Name', 'Job title', 'Seniority *', 'Function *', 'Email', 'Phone', 'Direct phone', 'Company',
-  'Address 1', 'Address 2', 'City', 'State', 'Zip / Postal code', 'Country *', 'Industry *',
+  // First + last name make the Name (a file with one "Name" column still uploads too)
+  'First name', 'Last name', 'Job title', 'Seniority *', 'Function *', 'Email', 'Phone', 'Direct phone', 'Company',
+  'Domain', 'Address 1', 'Address 2', 'City', 'State', 'Zip / Postal code', 'Country *', 'Industry *',
   'Employee size *', 'Revenue', 'Company LinkedIn', 'Employee LinkedIn', 'Updated on',
 ];
 const VALUES = [

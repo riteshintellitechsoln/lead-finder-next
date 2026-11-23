@@ -11,8 +11,8 @@ import Num from '@/components/Num';
 import { COUNTRIES, FUNCTIONS, INDUSTRIES, SENIORITY_LEVELS, SIZE_EDGES, SIZE_KEYS, SIZE_LABELS } from '@/lib/options';
 
 const FIELDS = [
-  ['name', 'Name *'], ['title', 'Job title'], ['seniority', 'Seniority level *'], ['department', 'Function *'],
-  ['company', 'Company'], ['domain', 'Company domain'], ['industry', 'Industry *'], ['employees', 'Company headcount *'],
+  ['first_name', 'First name *'], ['last_name', 'Last name'], ['title', 'Job title'], ['seniority', 'Seniority level *'], ['department', 'Function *'],
+  ['company', 'Company'], ['domain', 'Domain'], ['industry', 'Industry *'], ['employees', 'Company headcount *'],
   ['revenue', 'Revenue, e.g. $12M'], ['techs', 'Technologies, comma separated'],
   ['city', 'City'], ['county', 'County / District'], ['state', 'State'], ['country', 'Country'], ['zip', 'Zip / PIN code'],
   ['email', 'Email'], ['email_status', 'Email status (as in your file)'], ['verified_at', 'Verified on (YYYY-MM-DD)'],
@@ -277,10 +277,13 @@ export default function DataManager() {
   }
   async function deletePicked() {
     const what = `${fmt(count)} ${count === 1 ? 'person' : 'people'}`;
-    if (all && !filtered) {
-      const typed = window.prompt(`This deletes ALL ${what} in the data. It cannot be undone.\nType DELETE to continue.`);
-      if (typed !== 'DELETE') return;
-    } else if (!window.confirm(`Delete ${what}? This cannot be undone.`)) return;
+    // Every delete of picked rows asks the admin to type DELETE, not only "delete everyone"
+    const message = all && !filtered
+      ? `This deletes ALL ${what} in the data. It cannot be undone.\nType DELETE to continue.`
+      : `This deletes ${what}. It cannot be undone.\nType DELETE to continue.`;
+    const typed = window.prompt(message);
+    if (typed === null) return;
+    if (typed.trim() !== 'DELETE') return toast('Not deleted. Type DELETE (in capitals) to confirm.');
     setBusy(true);
     try {
       const { removed } = await api('/admin/people?' + targetQuery(), { method: 'DELETE' });
@@ -349,7 +352,7 @@ export default function DataManager() {
               {PICK[k].map(([v, text]) => <option key={v} value={v}>{text}</option>)}
             </select>
           ) : (
-            <input key={k} className="txt" placeholder={label} aria-label={label} required={k === 'name'}
+            <input key={k} className="txt" placeholder={label} aria-label={label} required={k === 'first_name'}
               type={k === 'email' ? 'email' : 'text'} {...field(k)} />
           )))}
         </div>
