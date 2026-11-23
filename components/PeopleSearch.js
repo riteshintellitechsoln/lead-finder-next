@@ -24,8 +24,8 @@ import { useUrlFilters } from './filters/useUrlFilters';
 
 // Table columns, in the order of a typical lead file. [sort key or null, header]
 const COLUMNS = [
-  ['name', 'Name'], ['title', 'Job title'], ['seniority', 'Seniority'], [null, 'Function'], [null, 'Email'],
-  [null, 'Phone'], [null, 'Direct phone'], ['company', 'Company'], [null, 'Address 1'], [null, 'Address 2'],
+  ['firstName', 'First name'], ['lastName', 'Last name'], ['title', 'Job title'], ['seniority', 'Seniority'], [null, 'Function'], [null, 'Email'],
+  [null, 'Phone'], [null, 'Direct phone'], ['company', 'Company'], ['domain', 'Domain'], [null, 'Address 1'], [null, 'Address 2'],
   ['city', 'City'], [null, 'State'], [null, 'Zip / Postal code'], [null, 'Country'], [null, 'Industry'],
   ['employees', 'Employee size'], ['revenue', 'Revenue'], [null, 'Company LinkedIn'], [null, 'Employee LinkedIn'], ['updated', 'Updated on'],
 ];
@@ -428,8 +428,9 @@ export default function PeopleSearch({ filters: options }) {
             <select aria-label="Sort" value={state.sortBy ? `${state.sortBy}:${state.sortDir}` : ''}
               onChange={(e) => { const [f, d] = e.target.value.split(':'); setSort(f, d); }}>
               <option value="">Sort: Default</option>
-              <option value="name:asc">Name A–Z</option>
-              <option value="name:desc">Name Z–A</option>
+              <option value="firstName:asc">First name A–Z</option>
+              <option value="firstName:desc">First name Z–A</option>
+              <option value="lastName:asc">Last name A–Z</option>
               <option value="company:asc">Company A–Z</option>
               <option value="city:asc">Location A–Z</option>
               <option value="seniority:asc">Seniority, highest first</option>
@@ -510,7 +511,8 @@ export default function PeopleSearch({ filters: options }) {
                   rows.map((p) => (
                     <tr key={p.id} className={allSelected || selected.has(p.id) ? 'sel' : ''}>
                       <td><input type="checkbox" aria-label={`Select ${p.name}`} checked={allSelected || selected.has(p.id)} onChange={(e) => toggleRow(p.id, e.target.checked)} /></td>
-                      <td><PersonCell person={p} showSaved hideTitle /></td>
+                      <td><PersonCell person={p} label={p.first_name || p.name} showSaved hideTitle /></td>
+                      <td data-l="Last name">{dash(p.last_name)}</td>
                       <td data-l="Job title" className="wrap">{dash(p.title)}</td>
                       <td data-l="Seniority">{p.seniority ? <span className="pill">{p.seniority}</span> : '–'}</td>
                       <td data-l="Function">{dash(p.department)}</td>
@@ -522,8 +524,8 @@ export default function PeopleSearch({ filters: options }) {
                       <td data-l="Direct phone">{dash(p.direct_phone)}</td>
                       <td data-l="Company">
                         <div className="co">{p.company || '–'}</div>
-                        {p.domain && <div className="meta dom">{p.domain}</div>}
                       </td>
+                      <td data-l="Domain">{dash(p.domain)}</td>
                       <td data-l="Address 1" className="wrap">{dash(p.address1)}</td>
                       <td data-l="Address 2" className="wrap">{dash(p.address2)}</td>
                       <td data-l="City">{dash(p.city)}</td>

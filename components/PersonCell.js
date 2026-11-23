@@ -1,12 +1,13 @@
 import { initials } from '@/lib/format';
 
-export default function PersonCell({ person, showSaved = false, hideTitle = false }) {
+// label: what to show instead of the full name (e.g. only the first name in a First name column)
+export default function PersonCell({ person, label, showSaved = false, hideTitle = false }) {
   return (
     <div className="person">
       <div className="av">{initials(person.name)}</div>
       <div>
         <div className="pname">
-          {person.name} {showSaved && person.saved ? <span className="pill ok">Saved</span> : null}
+          {label ?? person.name} {showSaved && person.saved ? <span className="pill ok">Saved</span> : null}
         </div>
         {!hideTitle && <div className="ptitle">{person.title || '–'}</div>}
       </div>
